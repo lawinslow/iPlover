@@ -3,6 +3,8 @@ $(function(){
     document.addEventListener("deviceready", on_device_ready, false);
 });
 
+var captured_img = null;
+
 on_device_ready = function() {
 	
 	//Add click functionality to GPS map links
@@ -25,11 +27,20 @@ on_device_ready = function() {
     
     $('#picture_button').click(function(e){
         e.preventDefault();
-        $('#newnestsite_picture').click();
-    });
-    
-    $('#newnestsite_picture').change(function(e){
-        $('#picture_button').html('Retake Nest Photo');
+        //$('#newnestsite_picture').click();
+        navigator.camera.getPicture(onSuccess, onFail, { quality: 100,
+            destinationType: Camera.DestinationType.DATA_URL
+        });
+
+        function onSuccess(imageData) {
+            captured_img = imageData;
+            $('#picture_button').html('Retake Nest Photo');
+        }
+
+        function onFail(message) {
+            alert('Failed because: ' + message);
+        }
+        
     });
     
 };
@@ -48,7 +59,7 @@ var verify_new_site = function(){
 		return false;
 	}
 	
-	if($('#newnestsite_picture')[0].files.length < 1){
+	if(captured_img == null){
 		alert('Sorry, picture is mandatory.');
 		return false;
 	}
@@ -105,7 +116,7 @@ var new_site_submit_function = function(e) {
     siteObject.uuid = generateUUID();
     
     iplover.data.saveImage(siteObject.uuid, 
-                            $('#newnestsite_picture')[0].files[0],
+                            b64toBlob(captured_img),
                             function(fpath){
                                 siteObject['image_path'] = fpath;
                                 
@@ -165,4 +176,28 @@ $("#refresh-link").click(function(){
 });
 
 
+
+function b64toBlob(b64Data, contentType, sliceSize) {
+    contentType = contentType || '';
+    sliceSize = sliceSize || 512;
+
+    var byteCharacters = atob(b64Data);
+    var byteArrays = [];
+
+    for (var offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+        var slice = byteCharacters.slice(offset, offset + sliceSize);
+
+        var byteNumbers = new Array(slice.length);
+        for (var i = 0; i < slice.length; i++) {
+            byteNumbers[i] = slice.charCodeAt(i);
+        }
+
+        var byteArray = new Uint8Array(byteNumbers);
+
+        byteArrays.push(byteArray);
+    }
+
+    var blob = new Blob(byteArrays, {type: contentType});
+    return blob;
+};
 
